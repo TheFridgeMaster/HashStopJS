@@ -2,6 +2,8 @@ const sysinfo = require('systeminformation')
 const fs = require('fs')
 const crypto = require('crypto')
 const fkill = require('fkill')
+const sql = require('sequelize')
+const dotenv = require('dotenv')
 
 class ProcessInfo {
 	constructor(processname, exepath, processid, processhash = ""){
@@ -49,13 +51,16 @@ class ProcessInfo {
 	}
 
 	killDatShit(){
-		if ( hashes.includes(this.processhash) ){
-			fkill(this.processid)
-		}
+		let hash = this.processhash
+			.then(response => {
+				if ( hashes.includes(response.toUpperCase()) ){
+					fkill(this.processid)
+				}
+			})
 	}
 }
 
-const hashes = [
+/*const hashes = [
 	"441AC6D180BCBF76997234978E5B4399E4907401E71B938E7221BB7D4AD1426A",
 	"E51860E69E69EF452691199A7C1D4279694310510CEBEB9C9472CE3E36ECCEB4",
 	"BA7BBB73B984572FEFE9049714C043D5C818CD88FFD9DF9CAAC2BE37515CA267",
@@ -67,10 +72,18 @@ const hashes = [
 	"9F83F1B27EFB24EE5DD4569B432876D97388FC462CD477FB9E45817B6D817595",
 	"7E94D681C40A433C2B265CD6D4249BEC04051233460C7103A0DD08883ACE4F83",
 	"C02CEB56AEE92B87EFC3F122ECA3903441538897AB767E82559D23DDE9329CCD",
-	"98AE4631DED8E519208907F2C13E11B610A55D91B136EB0692D19B5C556CEF6D"
-]
+	"98AE4631DED8E519208907F2C13E11B610A55D91B136EB0692D19B5C556CEF6D",
+	'B50B7A61D32A369DBB61637C623D62ACD58C84611316F7BADD2B63B2A3289833'
+]*/
+
+let hashes = []
 
 let processes = []
+
+dotenv.config()
+
+const dbUser = process.env.dbuser
+const dbPass = process.env.dbpass
 
 const buttface = sysinfo.processes()
 	.then( data => {
@@ -86,13 +99,21 @@ const buttface = sysinfo.processes()
 		return processes
 	})
 	.then( procs => {
+		const sequelize = new sql(`postgres://$(dbUser):$(dbPass)@fourbythree.com.au/hashlist`)
+		sequelize
+			.query('SELECT hash FROM hashes')
+			.then(response => {
+				for (entry in response[1].rows){
+					hashes.push(response[1].rows[entry].hash)
+				}
+			})
 		let promises = []
 		for ( item in procs ){
 			promises.push(procs[item].fileHash())
 		}
-		Promise.all(promises).then(respons => {
+		Promise.all(promises).then(response => {
 			for (guy of processes){
-				console.log(guy)
+				guy.killDatShit()
 			}
 		})
 	})
