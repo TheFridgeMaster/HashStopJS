@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "fkill": "^6.2.0",
     "systeminformation": "^4.12.2"
   }
 }
